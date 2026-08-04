@@ -1,0 +1,131 @@
+name: synapvault
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: synapvault-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - synapvault-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: synapvault-redis
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD}"
+      ]
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - synapvault-network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: synapvault-qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    ports:
+      - "127.0.0.1:${QDRANT_HTTP_PORT}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - synapvault-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: synapvault-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - synapvault-network
+
+  minio-create-bucket:
+    image: minio/mc:latest
+    container_name: synapvault-minio-init
+    depends_on:
+      - minio
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000
+      \"$${MINIO_ROOT_USER}\"
+      \"$${MINIO_ROOT_PASSWORD}\"; do
+        echo 'Waiting for MinIO...';
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/$${MINIO_DEFAULT_BUCKET};
+      mc anonymous set none local/$${MINIO_DEFAULT_BUCKET};
+      echo 'MinIO bucket is ready.';
+      "
+    networks:
+      - synapvault-network
+
+networks:
+  synapvault-network:
+    name: synapvault-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: synapvault-postgres-data
+
+  redis_data:
+    name: synapvault-redis-data
+
+  qdrant_data:
+    name: synapvault-qdrant-data
+
+  minio_data:
+    name: synapvault-minio-data
+    
