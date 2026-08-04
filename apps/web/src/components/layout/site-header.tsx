@@ -14,6 +14,7 @@ const navigation = [
   { label: "Pricing", href: "/pricing" },
   { label: "Security", href: "/security" },
   { label: "Docs", href: "/docs" },
+  { label: "About", href: "/about" },
 ];
 
 export function SiteHeader() {

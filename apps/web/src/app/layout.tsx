@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { siteConfig } from "@/lib/site-config";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,13 +18,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "SynapVault AI",
-    template: "%s | SynapVault AI",
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
   },
-  description:
-    "Upload documents, ask grounded questions and receive answers with exact citations.",
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
   keywords: [
     "document intelligence",
     "RAG",
@@ -30,14 +32,45 @@ export const metadata: Metadata = {
     "PDF chat",
     "vector search",
     "knowledge workspace",
+    "hybrid retrieval",
+    "document citations",
   ],
-  authors: [{ name: "Priyanshu Jaggi" }],
-  creator: "Priyanshu Jaggi",
+  authors: [
+    {
+      name: siteConfig.creator,
+    },
+  ],
+  creator: siteConfig.creator,
+  publisher: siteConfig.name,
+  category: "technology",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "SynapVault AI",
-    description: "Turn every document into trusted, connected intelligence.",
     type: "website",
     locale: "en_IN",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "SynapVault AI document intelligence platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -45,6 +78,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: "#f8f9ff",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
