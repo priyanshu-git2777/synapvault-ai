@@ -1,0 +1,32 @@
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: synapvault-server
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/synapvault
+    username: synapvault_user
+    password: SynapVault1234
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:SynapVaultDevelopmentSecretKeyMustContainAtLeastThirtyTwoCharacters123}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
