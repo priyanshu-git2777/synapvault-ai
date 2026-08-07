@@ -1,14 +1,20 @@
 export type DocumentStatus =
-  | "READY"
+  | "UPLOADED"
   | "PROCESSING"
+  | "READY"
   | "FAILED";
 
 export type DocumentItem = {
-  id: string;
+  id: number;
   name: string;
-  type: "PDF" | "DOCX" | "TXT";
-  size: string;
-  pageCount?: number;
+  contentType: string;
+  fileSize: number;
   status: DocumentStatus;
-  uploadedAt: string;
+  pageCount: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DocumentCountResponse = {
+  total: number;
 };

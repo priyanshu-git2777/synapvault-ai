@@ -1,86 +1,93 @@
-import Link from "next/link";
+"use client";
+
 import {
   FileText,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 
 import type {
   DocumentItem,
-  DocumentStatus,
 } from "@/features/documents/document.types";
+
+import {
+  formatDocumentDate,
+  formatFileSize,
+  getStatusLabel,
+} from "@/features/documents/document.utils";
 
 type DocumentCardProps = {
   document: DocumentItem;
+  onDelete?: (
+    documentId: number,
+  ) => void | Promise<void>;
 };
-
-function getStatusClasses(
-  status: DocumentStatus,
-): string {
-  switch (status) {
-    case "READY":
-      return "border-emerald-300/15 bg-emerald-300/10 text-emerald-200";
-
-    case "PROCESSING":
-      return "border-amber-300/15 bg-amber-300/10 text-amber-200";
-
-    case "FAILED":
-      return "border-rose-300/15 bg-rose-300/10 text-rose-200";
-
-    default:
-      return "border-white/10 bg-white/5 text-slate-300";
-  }
-}
 
 export function DocumentCard({
   document,
+  onDelete,
 }: DocumentCardProps) {
+  const pageText =
+    document.pageCount === null
+      ? "Page count pending"
+      : `${document.pageCount} pages`;
+
   return (
-    <article className="group rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/15 hover:bg-white/[0.055]">
+    <article className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-cyan-300/20 hover:bg-white/[0.055]">
       <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-300/10 text-rose-200">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/10 bg-cyan-300/10 text-cyan-200">
           <FileText className="h-5 w-5" />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <Link
-                href={`/documents/${document.id}`}
-                className="block truncate text-sm font-medium text-white transition hover:text-cyan-200"
-              >
+              <h3 className="truncate font-medium text-white">
                 {document.name}
-              </Link>
+              </h3>
 
               <p className="mt-1 text-xs text-slate-500">
-                {document.type} · {document.size}
-                {document.pageCount
-                  ? ` · ${document.pageCount} pages`
-                  : ""}
+                PDF ·{" "}
+                {formatFileSize(
+                  document.fileSize,
+                )}{" "}
+                · {pageText}
               </p>
             </div>
 
-            <button
-              type="button"
-              className="rounded-lg p-1.5 text-slate-600 transition hover:bg-white/5 hover:text-white"
-              aria-label={`Options for ${document.name}`}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+            <MoreHorizontal className="h-5 w-5 shrink-0 text-slate-600" />
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span
-              className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <span className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-cyan-200">
+              {getStatusLabel(
                 document.status,
-              )}`}
-            >
-              {document.status}
+              )}
             </span>
 
             <span className="text-xs text-slate-600">
-              {document.uploadedAt}
+              {formatDocumentDate(
+                document.createdAt,
+              )}
             </span>
           </div>
+
+          {onDelete && (
+            <div className="mt-4 border-t border-white/[0.06] pt-4">
+              <button
+                type="button"
+                onClick={() =>
+                  void onDelete(
+                    document.id,
+                  )
+                }
+                className="inline-flex items-center gap-2 text-xs text-slate-500 transition hover:text-rose-300"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete document
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>

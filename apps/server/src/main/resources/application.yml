@@ -1,4 +1,3 @@
-
 server:
   port: 8080
 
@@ -7,9 +6,9 @@ spring:
     name: synapvault-server
 
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5432/synapvault
-    username: synapvault_user
-    password: SynapVault1234
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/synapvault}
+    username: ${DB_USERNAME:synapvault_user}
+    password: ${DB_PASSWORD:SynapVault1234}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -21,6 +20,12 @@ spring:
       hibernate:
         format_sql: true
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   jackson:
     default-property-inclusion: non_null
 
@@ -30,3 +35,6 @@ app:
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
+  storage:
+    upload-dir: ${UPLOAD_DIR:uploads}
