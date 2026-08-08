@@ -15,10 +15,11 @@ async function parseError(
   response: Response,
 ): Promise<string> {
   try {
-    const body = (await response.json()) as {
-      message?: string;
-      error?: string;
-    };
+    const body =
+      (await response.json()) as {
+        message?: string;
+        error?: string;
+      };
 
     return (
       body.message ??
@@ -31,7 +32,8 @@ async function parseError(
 }
 
 function authHeaders(): HeadersInit {
-  const token = getAccessToken();
+  const token =
+    getAccessToken();
 
   if (!token) {
     throw new Error(
@@ -40,20 +42,22 @@ function authHeaders(): HeadersInit {
   }
 
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization:
+      `Bearer ${token}`,
   };
 }
 
 export async function getDocuments():
 Promise<DocumentItem[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/documents`,
-    {
-      method: "GET",
-      headers: authHeaders(),
-      cache: "no-store",
-    },
-  );
+  const response =
+    await fetch(
+      `${API_BASE_URL}/documents`,
+      {
+        method: "GET",
+        headers: authHeaders(),
+        cache: "no-store",
+      },
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -66,16 +70,41 @@ Promise<DocumentItem[]> {
   >;
 }
 
+export async function getDocument(
+  documentId: number,
+): Promise<DocumentItem> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/documents/${documentId}`,
+      {
+        method: "GET",
+        headers: authHeaders(),
+        cache: "no-store",
+      },
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      await parseError(response),
+    );
+  }
+
+  return response.json() as Promise<
+    DocumentItem
+  >;
+}
+
 export async function getDocumentCount():
 Promise<number> {
-  const response = await fetch(
-    `${API_BASE_URL}/documents/count`,
-    {
-      method: "GET",
-      headers: authHeaders(),
-      cache: "no-store",
-    },
-  );
+  const response =
+    await fetch(
+      `${API_BASE_URL}/documents/count`,
+      {
+        method: "GET",
+        headers: authHeaders(),
+        cache: "no-store",
+      },
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -93,7 +122,8 @@ Promise<number> {
 export async function uploadDocument(
   file: File,
 ): Promise<DocumentItem> {
-  const token = getAccessToken();
+  const token =
+    getAccessToken();
 
   if (!token) {
     throw new Error(
@@ -101,20 +131,26 @@ export async function uploadDocument(
     );
   }
 
-  const formData = new FormData();
+  const formData =
+    new FormData();
 
-  formData.append("file", file);
-
-  const response = await fetch(
-    `${API_BASE_URL}/documents`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    },
+  formData.append(
+    "file",
+    file,
   );
+
+  const response =
+    await fetch(
+      `${API_BASE_URL}/documents`,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+        body: formData,
+      },
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -130,13 +166,14 @@ export async function uploadDocument(
 export async function deleteDocument(
   documentId: number,
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/documents/${documentId}`,
-    {
-      method: "DELETE",
-      headers: authHeaders(),
-    },
-  );
+  const response =
+    await fetch(
+      `${API_BASE_URL}/documents/${documentId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
+    );
 
   if (!response.ok) {
     throw new Error(

@@ -30,28 +30,65 @@ export function useDocuments() {
     useState<string | null>(null);
 
   const loadDocuments =
-    useCallback(async () => {
-      try {
-        setError(null);
+    useCallback(
+      async (
+        showLoading = false,
+      ) => {
+        if (showLoading) {
+          setIsLoading(true);
+        }
 
-        const result =
-          await getDocuments();
+        try {
+          setError(null);
 
-        setDocuments(result);
-      } catch (loadError) {
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Unable to load documents.",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }, []);
+          const result =
+            await getDocuments();
+
+          setDocuments(result);
+        } catch (loadError) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load documents.",
+          );
+        } finally {
+          if (showLoading) {
+            setIsLoading(false);
+          }
+        }
+      },
+      [],
+    );
 
   useEffect(() => {
-    void loadDocuments();
+    void loadDocuments(true);
   }, [loadDocuments]);
+
+  useEffect(() => {
+    const hasProcessingDocuments =
+      documents.some(
+        (document) =>
+          document.status ===
+            "UPLOADED" ||
+          document.status ===
+            "PROCESSING",
+      );
+
+    if (!hasProcessingDocuments) {
+      return;
+    }
+
+    const interval =
+      window.setInterval(() => {
+        void loadDocuments(false);
+      }, 2000);
+
+    return () => {
+      window.clearInterval(
+        interval,
+      );
+    };
+  }, [documents, loadDocuments]);
 
   async function upload(
     file: File,
@@ -95,7 +132,8 @@ export function useDocuments() {
       setDocuments((current) =>
         current.filter(
           (document) =>
-            document.id !== documentId,
+            document.id !==
+            documentId,
         ),
       );
 
@@ -118,6 +156,7 @@ export function useDocuments() {
     error,
     upload,
     remove,
-    refresh: loadDocuments,
+    refresh: () =>
+      loadDocuments(false),
   };
 }

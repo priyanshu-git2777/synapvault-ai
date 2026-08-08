@@ -8,14 +8,18 @@ import java.util.Optional;
 public interface DocumentRepository
     extends JpaRepository<Document, Long> {
 
-    List<Document> findAllByOwnerEmailOrderByCreatedAtDesc(
+    List<Document>
+        findAllByOwnerEmailOrderByCreatedAtDesc(
+            String ownerEmail
+        );
+
+    Optional<Document>
+        findByIdAndOwnerEmail(
+            Long id,
+            String ownerEmail
+        );
+
+    long countByOwnerEmail(
         String ownerEmail
     );
-
-    Optional<Document> findByIdAndOwnerEmail(
-        Long id,
-        String ownerEmail
-    );
-
-    long countByOwnerEmail(String ownerEmail);
 }

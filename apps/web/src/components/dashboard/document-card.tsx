@@ -1,14 +1,13 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   FileText,
-  MoreHorizontal,
   Trash2,
 } from "lucide-react";
 
-import type {
-  DocumentItem,
-} from "@/features/documents/document.types";
+import type { DocumentItem } from "@/features/documents/document.types";
 
 import {
   formatDocumentDate,
@@ -18,6 +17,7 @@ import {
 
 type DocumentCardProps = {
   document: DocumentItem;
+
   onDelete?: (
     documentId: number,
   ) => void | Promise<void>;
@@ -33,30 +33,29 @@ export function DocumentCard({
       : `${document.pageCount} pages`;
 
   return (
-    <article className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-cyan-300/20 hover:bg-white/[0.055]">
+    <article className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-cyan-300/20 hover:bg-white/[0.055]">
       <div className="flex items-start gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/10 bg-cyan-300/10 text-cyan-200">
           <FileText className="h-5 w-5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate font-medium text-white">
-                {document.name}
-              </h3>
+          <Link
+            href={`/documents/${document.id}`}
+            className="block"
+          >
+            <h3 className="truncate font-medium text-white transition hover:text-cyan-200">
+              {document.name}
+            </h3>
 
-              <p className="mt-1 text-xs text-slate-500">
-                PDF ·{" "}
-                {formatFileSize(
-                  document.fileSize,
-                )}{" "}
-                · {pageText}
-              </p>
-            </div>
-
-            <MoreHorizontal className="h-5 w-5 shrink-0 text-slate-600" />
-          </div>
+            <p className="mt-1 text-xs text-slate-500">
+              PDF ·{" "}
+              {formatFileSize(
+                document.fileSize,
+              )}{" "}
+              · {pageText}
+            </p>
+          </Link>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <span className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-cyan-200">

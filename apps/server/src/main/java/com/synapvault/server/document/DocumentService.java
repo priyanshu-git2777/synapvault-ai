@@ -1,7 +1,11 @@
 package com.synapvault.server.document;
 
+import com.synapvault.server.chunk.DocumentChunkRepository;
+import com.synapvault.server.page.PageRepository;
+import com.synapvault.server.processing.event.DocumentUploadedEvent;
 import com.synapvault.server.storage.FileStorageService;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,22 +14,49 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class DocumentService {
 
-    private final DocumentRepository documentRepository;
-    private final FileStorageService fileStorageService;
+    private final DocumentRepository
+        documentRepository;
+
+    private final FileStorageService
+        fileStorageService;
+
+    private final ApplicationEventPublisher
+        eventPublisher;
+
+    private final PageRepository
+        pageRepository;
+
+    private final DocumentChunkRepository
+        chunkRepository;
 
     public DocumentService(
         DocumentRepository documentRepository,
-        FileStorageService fileStorageService
+        FileStorageService fileStorageService,
+        ApplicationEventPublisher
+            eventPublisher,
+        PageRepository pageRepository,
+        DocumentChunkRepository
+            chunkRepository
     ) {
         this.documentRepository =
             documentRepository;
 
         this.fileStorageService =
             fileStorageService;
+
+        this.eventPublisher =
+            eventPublisher;
+
+        this.pageRepository =
+            pageRepository;
+
+        this.chunkRepository =
+            chunkRepository;
     }
 
     @Transactional
@@ -33,23 +64,22 @@ public class DocumentService {
         MultipartFile file,
         String ownerEmail
     ) {
-        if (
-            ownerEmail == null ||
-            ownerEmail.isBlank()
-        ) {
-            throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Authenticated user was not found."
-            );
-        }
+        validateOwnerEmail(
+            ownerEmail
+        );
 
-        FileStorageService.StoredFile storedFile =
-            fileStorageService.store(file);
+        FileStorageService.StoredFile
+            storedFile =
+                fileStorageService.store(
+                    file
+                );
 
         try {
-            Instant now = Instant.now();
+            Instant now =
+                Instant.now();
 
-            Document document = new Document();
+            Document document =
+                new Document();
 
             document.setOriginalName(
                 sanitizeOriginalName(
@@ -67,7 +97,9 @@ public class DocumentService {
                     : file.getContentType()
             );
 
-            document.setFileSize(file.getSize());
+            document.setFileSize(
+                file.getSize()
+            );
 
             document.setStoragePath(
                 storedFile.storagePath()
@@ -80,18 +112,30 @@ public class DocumentService {
             document.setPageCount(null);
 
             document.setOwnerEmail(
-                ownerEmail.toLowerCase()
+                normalizeEmail(
+                    ownerEmail
+                )
             );
 
             document.setCreatedAt(now);
             document.setUpdatedAt(now);
 
             Document saved =
-                documentRepository.save(document);
+                documentRepository
+                    .save(document);
 
-            return DocumentMapper.toResponse(saved);
+            eventPublisher.publishEvent(
+                new DocumentUploadedEvent(
+                    saved.getId()
+                )
+            );
 
-        } catch (RuntimeException exception) {
+            return DocumentMapper
+                .toResponse(saved);
+
+        } catch (
+            RuntimeException exception
+        ) {
             fileStorageService.delete(
                 storedFile.storedName()
             );
@@ -104,12 +148,20 @@ public class DocumentService {
     public List<DocumentResponse> findAll(
         String ownerEmail
     ) {
+        validateOwnerEmail(
+            ownerEmail
+        );
+
         return documentRepository
             .findAllByOwnerEmailOrderByCreatedAtDesc(
-                ownerEmail.toLowerCase()
+                normalizeEmail(
+                    ownerEmail
+                )
             )
             .stream()
-            .map(DocumentMapper::toResponse)
+            .map(
+                DocumentMapper::toResponse
+            )
             .toList();
     }
 
@@ -118,15 +170,13 @@ public class DocumentService {
         Long documentId,
         String ownerEmail
     ) {
-        Document document =
-            findOwnedDocument(
-                documentId,
-                ownerEmail
+        return DocumentMapper
+            .toResponse(
+                findOwnedDocument(
+                    documentId,
+                    ownerEmail
+                )
             );
-
-        return DocumentMapper.toResponse(
-            document
-        );
     }
 
     @Transactional
@@ -140,18 +190,38 @@ public class DocumentService {
                 ownerEmail
             );
 
+        chunkRepository
+            .deleteAllByDocumentId(
+                document.getId()
+            );
+
+        pageRepository
+            .deleteAllByDocumentId(
+                document.getId()
+            );
+
         fileStorageService.delete(
             document.getStoredName()
         );
 
-        documentRepository.delete(document);
+        documentRepository.delete(
+            document
+        );
     }
 
     @Transactional(readOnly = true)
-    public long count(String ownerEmail) {
+    public long count(
+        String ownerEmail
+    ) {
+        validateOwnerEmail(
+            ownerEmail
+        );
+
         return documentRepository
             .countByOwnerEmail(
-                ownerEmail.toLowerCase()
+                normalizeEmail(
+                    ownerEmail
+                )
             );
     }
 
@@ -159,62 +229,86 @@ public class DocumentService {
         Long documentId,
         String ownerEmail
     ) {
+        validateOwnerEmail(
+            ownerEmail
+        );
+
         return documentRepository
             .findByIdAndOwnerEmail(
                 documentId,
-                ownerEmail.toLowerCase()
+                normalizeEmail(
+                    ownerEmail
+                )
             )
             .orElseThrow(
-                () -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Document was not found."
-                )
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Document was not found."
+                    )
+            );
+    }
+
+    private void validateOwnerEmail(
+        String ownerEmail
+    ) {
+        if (
+            ownerEmail == null ||
+            ownerEmail.isBlank()
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Authenticated user was not found."
+            );
+        }
+    }
+
+    private String normalizeEmail(
+        String ownerEmail
+    ) {
+        return ownerEmail
+            .trim()
+            .toLowerCase(
+                Locale.ROOT
             );
     }
 
     private String sanitizeOriginalName(
         String originalName
     ) {
-        if (originalName == null) {
+        if (
+            originalName == null ||
+            originalName.isBlank()
+        ) {
             return "document.pdf";
         }
 
-        String sanitized =
-            PathSafeFilename.sanitize(
-                originalName
+        String normalized =
+            originalName.replace(
+                "\\",
+                "/"
             );
 
-        if (sanitized.isBlank()) {
+        int lastSlash =
+            normalized
+                .lastIndexOf('/');
+
+        if (lastSlash >= 0) {
+            normalized =
+                normalized.substring(
+                    lastSlash + 1
+                );
+        }
+
+        normalized =
+            normalized
+                .replace("\0", "")
+                .trim();
+
+        if (normalized.isBlank()) {
             return "document.pdf";
         }
 
-        return sanitized;
-    }
-
-    private static final class PathSafeFilename {
-
-        private PathSafeFilename() {
-        }
-
-        private static String sanitize(
-            String filename
-        ) {
-            String normalized =
-                filename.replace("\\", "/");
-
-            int lastSlash =
-                normalized.lastIndexOf('/');
-
-            if (lastSlash >= 0) {
-                normalized =
-                    normalized.substring(
-                        lastSlash + 1
-                    );
-            }
-
-            return normalized
-                .replace("\0", "")
-                .trim();
-        }
+        return normalized;
     }
 }

@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -83,9 +84,12 @@ export function RecentDocuments({
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
-                  {document.name}
-                </p>
+                <Link
+  href={`/documents/${document.id}`}
+  className="block truncate text-sm font-medium text-white transition hover:text-cyan-200"
+>
+  {document.name}
+</Link>
 
                 <p className="mt-1 text-xs text-slate-500">
                   PDF ·{" "}

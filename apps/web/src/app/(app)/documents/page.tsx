@@ -2,25 +2,20 @@
 
 import {
   ChangeEvent,
-  Filter,
-  LoaderCircle,
-  Plus,
-  Search,
-} from "lucide-react";
-
-import {
   useMemo,
   useRef,
   useState,
 } from "react";
 
 import {
-  DocumentCard,
-} from "@/components/dashboard/document-card";
+  Filter,
+  LoaderCircle,
+  Plus,
+  Search,
+} from "lucide-react";
 
-import {
-  useDocuments,
-} from "@/features/documents/use-documents";
+import { DocumentCard } from "@/components/dashboard/document-card";
+import { useDocuments } from "@/features/documents/use-documents";
 
 export default function DocumentsPage() {
   const {
@@ -56,23 +51,12 @@ export default function DocumentsPage() {
     }, [documents, search]);
 
   async function handleFileChange(
-    event:
-      ChangeEvent<HTMLInputElement>,
+    event: ChangeEvent<HTMLInputElement>,
   ) {
     const file =
       event.target.files?.[0];
 
     if (!file) {
-      return;
-    }
-
-    if (
-      file.type !== "application/pdf" &&
-      !file.name
-        .toLowerCase()
-        .endsWith(".pdf")
-    ) {
-      event.target.value = "";
       return;
     }
 
@@ -101,7 +85,7 @@ export default function DocumentsPage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept=".pdf,application/pdf"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -117,8 +101,7 @@ export default function DocumentsPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Upload and manage the PDFs in
-            your AI learning workspace.
+            Upload and manage PDFs in your SynapVault workspace.
           </p>
         </div>
 
@@ -192,7 +175,7 @@ export default function DocumentsPage() {
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
             {search
               ? "Try another search term."
-              : "Upload your first PDF to begin building your SynapVault learning workspace."}
+              : "Upload your first PDF to begin building your SynapVault workspace."}
           </p>
         </div>
       ) : (
