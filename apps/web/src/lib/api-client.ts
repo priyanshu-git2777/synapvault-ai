@@ -2,19 +2,33 @@ import { getAccessToken } from "@/features/auth/auth-storage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+export type ApiFieldErrors = Record<string, string>;
+
 export class ApiClientError extends Error {
   status: number;
+  fieldErrors?: ApiFieldErrors;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    fieldErrors?: ApiFieldErrors,
+  ) {
     super(message);
+
     this.name = "ApiClientError";
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
 type ApiOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
   authenticated?: boolean;
+};
+
+type ErrorResponse = {
+  message?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export async function apiRequest<T>(
@@ -42,29 +56,39 @@ export async function apiRequest<T>(
     const token = getAccessToken();
 
     if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
+      headers.set(
+        "Authorization",
+        `Bearer ${token}`,
+      );
     }
   }
 
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...requestOptions,
-      headers,
-      body:
-        body === undefined
-          ? undefined
-          : JSON.stringify(body),
-    });
+    const response = await fetch(
+      `${API_URL}${endpoint}`,
+      {
+        ...requestOptions,
+        headers,
+        body:
+          body === undefined
+            ? undefined
+            : JSON.stringify(body),
+      },
+    );
 
     if (!response.ok) {
       let message = "The request failed.";
+      let fieldErrors: ApiFieldErrors | undefined;
 
       try {
-        const data = (await response.json()) as {
-          message?: string;
-        };
+        const data =
+          (await response.json()) as ErrorResponse;
 
-        message = data.message ?? message;
+        message =
+          data.message ?? message;
+
+        fieldErrors =
+          data.fieldErrors;
       } catch {
         // Keep default message.
       }
@@ -72,6 +96,7 @@ export async function apiRequest<T>(
       throw new ApiClientError(
         message,
         response.status,
+        fieldErrors,
       );
     }
 
