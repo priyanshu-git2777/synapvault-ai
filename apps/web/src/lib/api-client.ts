@@ -1,61 +1,93 @@
-import type { ApiErrorResponse } from "@/features/auth/auth.types";
+import { getAccessToken } from "@/features/auth/auth-storage";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
-
-type ApiRequestOptions = Omit<RequestInit, "body"> & {
-  body?: unknown;
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export class ApiClientError extends Error {
   status: number;
-  fieldErrors?: Record<string, string>;
 
-  constructor(
-    message: string,
-    status: number,
-    fieldErrors?: Record<string, string>,
-  ) {
+  constructor(message: string, status: number) {
     super(message);
     this.name = "ApiClientError";
     this.status = status;
-    this.fieldErrors = fieldErrors;
   }
 }
 
+type ApiOptions = Omit<RequestInit, "body"> & {
+  body?: unknown;
+  authenticated?: boolean;
+};
+
 export async function apiRequest<T>(
   endpoint: string,
-  options: ApiRequestOptions = {},
+  options: ApiOptions = {},
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    body:
-      options.body === undefined
-        ? undefined
-        : JSON.stringify(options.body),
-  });
+  const {
+    authenticated = false,
+    body,
+    ...requestOptions
+  } = options;
 
-  if (!response.ok) {
-    let errorData: ApiErrorResponse = {};
-
-    try {
-      errorData = (await response.json()) as ApiErrorResponse;
-    } catch {
-      errorData = {
-        message: "The server returned an invalid response.",
-      };
-    }
-
+  if (!API_URL) {
     throw new ApiClientError(
-      errorData.message ?? "The request failed.",
-      response.status,
-      errorData.fieldErrors,
+      "NEXT_PUBLIC_API_URL is not configured.",
+      0,
     );
   }
 
-  return (await response.json()) as T;
+  const headers = new Headers(requestOptions.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  if (authenticated) {
+    const token = getAccessToken();
+
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...requestOptions,
+      headers,
+      body:
+        body === undefined
+          ? undefined
+          : JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      let message = "The request failed.";
+
+      try {
+        const data = (await response.json()) as {
+          message?: string;
+        };
+
+        message = data.message ?? message;
+      } catch {
+        // Keep default message.
+      }
+
+      throw new ApiClientError(
+        message,
+        response.status,
+      );
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return (await response.json()) as T;
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      throw error;
+    }
+
+    throw new ApiClientError(
+      "Unable to connect to the backend server.",
+      0,
+    );
+  }
 }
